@@ -1,4 +1,4 @@
-# Pergunte para o agent
+# Solicite ao agent
 
 > Antes de propor soluções, analise primeiro meu código existente e explique seu funcionamento para demonstrar que você entendeu a estrutura atual.
 
