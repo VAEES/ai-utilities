@@ -155,6 +155,69 @@ resources:
       service-plan: application
 ```
 
+### CI/CD com GitHub Actions
+A estrutura do projeto conta com workflows para integração e entrega contínua:
+
+```
+.github/
+├── workflows/
+│   ├── application-service.yaml   # CI/CD específico para application-service
+│   ├── processing-service.yaml    # CI/CD específico para processing-service
+│   └── git-flow.yaml              # Workflow de validação de git flow
+└── pull_request_template.md       # Template para Pull Requests
+```
+
+#### Exemplo de Workflow para um Serviço
+
+```yaml
+name: FUP Application Service CI
+
+on:
+  push:
+    branches: [quality]
+  pull_request:
+    types: [opened, synchronize]
+    branches: [main, quality]
+    paths:
+      - "application-service/**" # Trigger apenas quando arquivos deste serviço são modificados
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    env:
+      working-directory: ./application-service
+
+    steps:
+      - name: Checkout to the current PR branch
+        uses: actions/checkout@v2
+
+      - name: Setup Nodejs version
+        uses: actions/setup-node@v2
+        with:
+          node-version: '20.x'
+
+      - name: Install dependencies with yarn
+        working-directory: ${{env.working-directory}}
+        run: yarn
+
+      - name: Run linter
+        working-directory: ${{env.working-directory}}
+        run: yarn lint
+
+      - name: Run tests
+        working-directory: ${{env.working-directory}}
+        run: yarn run test:coverage
+```
+
+#### Boas Práticas de CI/CD
+1. **Modularidade**: Workflows separados para cada serviço
+2. **Gatilhos específicos**: Executar CI apenas para serviços modificados
+3. **Caching**: Usar cache para dependências
+4. **Qualidade de código**: Incluir linting e testes
+5. **Relatórios**: Integração com ferramentas como SonarQube
+6. **Isolamento**: Executar cada serviço em seu próprio ambiente
+7. **Comentários automáticos**: Reportar resultados diretamente nas PRs
+
 ### Melhores Práticas
 1. **Organização**: Manter estrutura de diretórios consistente
 2. **Independência**: Minimizar dependências entre módulos
@@ -179,5 +242,7 @@ resources:
 - Usar TypeScript para todas as implementações, aproveitando o sistema de tipos.
 - Seguir convenções de nomenclatura já estabelecidas no projeto.
 - Considerar aspectos de desempenho ao implementar consultas de banco de dados.
+- Atualizar workflows CI/CD quando novos serviços são adicionados.
+- Manter as dependências atualizadas em cada serviço independentemente.
 
 Esta arquitetura proporciona escalabilidade, manutenibilidade e separação clara de responsabilidades em projetos SAP CAP, seguindo os princípios de arquitetura limpa e modular.
