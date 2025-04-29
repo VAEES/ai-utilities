@@ -1,0 +1,183 @@
+---
+description: SAP CAP specialist
+globs: 
+alwaysApply: false
+---
+# Regra SAP-CAP-MOD: Arquitetura Modular para Desenvolvimento SAP CAP
+
+Você é um especialista em desenvolvimento SAP Cloud Application Programming Model (CAP) com foco em arquiteturas modulares e altamente organizadas.
+
+Sempre que desenvolver aplicações SAP CAP, devo lembrar da arquitetura modular do FUP que segue:
+
+1. **S**eparação clara de módulos (application-service, processing-service, public-service)
+2. **A**rquitetura limpa (domain, use-cases, controllers, repositories)
+3. **P**adrão CDS para definição de modelos e serviços
+4. **C**onstrução independente de módulos com seus próprios package.json
+5. **A**uthentication via XSUAA e gerenciamento de permissões
+6. **P**adrão de implementação com controllers e factories
+7. **M**ulti-target deployment via MTA.yaml
+8. **O**rganização de código com responsabilidades bem definidas
+9. **D**istribuição de handlers em arquivos .ts para implementação de actions/functions CDS
+
+## Documentação Complementar para SAP CAP
+
+### Introdução
+O SAP Cloud Application Programming Model (CAP) é um framework para desenvolvimento de aplicações empresariais com foco em produtividade e simplicidade, fornecendo ferramentas, linguagens e bibliotecas para criar aplicações de negócio.
+
+### Arquitetura Modular
+- **application-service**: Gerencia a lógica principal da aplicação e APIs para o frontend
+- **processing-service**: Responsável pelo processamento de dados em background e jobs
+- **public-service**: Expõe endpoints públicos para integrações externas
+- **app-router**: Gerencia o roteamento de requisições e controle de acesso
+
+### Estrutura de Diretórios Padrão
+```
+service/
+├── src/
+│   ├── application/     # Casos de uso implementados
+│   ├── domain/          # Modelos e regras de negócio
+│   │   ├── adapters/    # Interfaces para serviços externos
+│   │   ├── errors/      # Definições de erros
+│   │   ├── models/      # Entidades de domínio
+│   │   ├── repositories/ # Interfaces de repositório
+│   │   └── use-cases/   # Contratos de casos de uso
+│   ├── infrastructure/  # Implementações concretas
+│   ├── main/            # Ponto de entrada e configuração
+│   │   ├── adapters/    # Adaptadores para frameworks
+│   │   ├── config/      # Configurações
+│   │   ├── factories/   # Fábricas para instanciação
+│   │   ├── routes/      # Definições CDS de serviços
+│   │   └── scripts/     # Scripts utilitários
+│   └── presentation/    # Controllers e interfaces de API
+├── package.json         # Dependências e scripts
+└── tsconfig.json        # Configuração TypeScript
+```
+
+### Definição de Modelos CDS
+Entidades são definidas em arquivos CDS separados:
+```cds
+namespace db.models;
+
+entity PurchaseOrderItems {
+    key mandant      : String(3);
+    key poNumber     : String(10);
+    key poItem       : String(5);
+    material         : String(18);
+    // ... outros campos
+    status           : Association to FupStatuses;
+}
+```
+
+### Serviços e Projeções
+Serviços são expostos via projeções CDS:
+```cds
+@path: '/fup/panel'
+@requires: 'authenticated-user'
+service PanelService {
+    entity PurchaseOrderItems as projection on models.PurchaseOrderItems {
+        *,
+        CASE WHEN responsible IS NULL 
+            THEN 'Responsável indefinido' 
+            ELSE responsible 
+        END as responsibleName: String(40)
+    };
+    
+    // Actions e Functions
+    action updatePurchaseOrderItem(payload: array of PurchaseOrderItems) returns Boolean;
+    function findUserFormLayout() returns { formsLayout: types.UserFormLayout };
+}
+```
+
+### Implementação de Serviços
+Os serviços são implementados em TypeScript:
+```typescript
+export default (service: Service) => {
+    service.before('READ', 'PurchaseOrderItems', async (request: Request) =>
+        beforeReadPurchaseOrderItemController(request)
+    );
+    
+    service.on('updatePurchaseOrderItem', async (request: Request) => 
+        updatePurchaseOrderItemController(request)
+    );
+}
+```
+
+### Padrão de Repositórios
+Acesso ao banco de dados via objeto global `cds`:
+```typescript
+export class CdsPurchaseOrderItemRepository implements PurchaseOrderItemRepository {
+    async update(items: PurchaseOrderItem[]): Promise<void> {
+        for (const item of items) {
+            await cds.update('PurchaseOrderItems')
+                .set({
+                    status_code: item.status.code,
+                    lastUpdate: new Date()
+                })
+                .where({
+                    mandant: item.mandant,
+                    poNumber: item.poNumber,
+                    poItem: item.poItem
+                });
+        }
+    }
+}
+```
+
+### Padrão de Factory
+Criação de controladores via factories:
+```typescript
+export const updatePurchaseOrderItemController = (request: Request): Promise<boolean> => {
+    const repository = new CdsPurchaseOrderItemRepository();
+    const useCase = new DbUpdatePurchaseOrderItemUseCase(repository);
+    const controller = new UpdatePurchaseOrderItemController(useCase);
+    return controller.handle(request);
+};
+```
+
+### Multi-Target Application (MTA)
+Configuração de deployment via mta.yaml:
+```yaml
+modules:
+  - name: suzano-fup-panel-application-service
+    type: nodejs
+    path: gen/application-service
+    requires:
+      - name: suzano-fup-panel-db
+      - name: suzano-fup-panel-uaa
+
+resources:
+  - name: suzano-fup-panel-db
+    type: com.sap.xs.hdi-container
+  - name: suzano-fup-panel-uaa
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: xsuaa
+      service-plan: application
+```
+
+### Melhores Práticas
+1. **Organização**: Manter estrutura de diretórios consistente
+2. **Independência**: Minimizar dependências entre módulos
+3. **SOLID**: Aplicar princípios SOLID ao desenhar componentes
+4. **Testabilidade**: Projetar para facilitar testes
+5. **Consistência**: Seguir convenções de nomenclatura
+6. **Acesso DB**: Usar cds.read(), cds.update() etc. para operações de banco
+7. **Transações**: Gerenciar transações com cds.transaction()
+8. **Segurança**: Implementar controles de acesso via @requires
+9. **Performance**: Otimizar consultas e evitar N+1 queries
+10. **Versionamento**: Manter compatibilidade entre versões de API
+
+## Regras Gerais
+
+- Ao desenvolver um serviço, sempre verificar se ele segue a estrutura modular proposta.
+- Separar claramente as responsabilidades entre camadas de aplicação.
+- Não introduzir acoplamentos desnecessários entre módulos.
+- Manter a consistência do estilo de código em todo o projeto.
+- Sempre documentar APIs expostas, especialmente ações e funções.
+- Evitar código repetido entre diferentes serviços.
+- Implementar testes unitários para casos de uso e controladores.
+- Usar TypeScript para todas as implementações, aproveitando o sistema de tipos.
+- Seguir convenções de nomenclatura já estabelecidas no projeto.
+- Considerar aspectos de desempenho ao implementar consultas de banco de dados.
+
+Esta arquitetura proporciona escalabilidade, manutenibilidade e separação clara de responsabilidades em projetos SAP CAP, seguindo os princípios de arquitetura limpa e modular.
