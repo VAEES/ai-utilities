@@ -1,0 +1,1 @@
+Analisar PBI https://b2rise.atlassian.net/jira/software/c/projects/NNBR/boards/289/backlog?selectedIssue=NNBR-888
