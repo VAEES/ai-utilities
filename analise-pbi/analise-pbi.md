@@ -12,7 +12,7 @@ Caso não haja nenhuma dúvida, me devolva no chat quais seriam as subtasks que 
 
 Além das subtasks que você criaria, preciso saber qual pontuação você daria para a resolução completa da PBI. Aqui na empresa, utilizamos o fibonnacci modificado (2,3,5,8,13). Onde 2 é a pontuação mínima para a resolução da tarefa e 13 a pontuação máxima para resolução. Caso você identifique que a tarefa possa ser maior do que 13, me informe o motivo, já que talvez precisemos separar em duas PBIs distintas.
 
-Após a minha aprovação, você deverá criar as subtasks como **tasks** no JIRA e deixe que eu associe como subtasks da PBI que está sendo analisada. Aguarde meu comando para prosseguir ou para realizar ajustes.
+Após a minha aprovação, você deverá criar as subtasks OBRIGATORIAMENTE como **tasks** no JIRA e deixe que eu associe como subtasks da PBI que está sendo analisada. Aguarde meu comando para prosseguir ou para realizar ajustes.
 
 Para todas as análises, verifique o source code atual. No path **/home/mlucascardoso/projects/natura/le44** você encontrará 3 pastas: backend, frontend e legacy-app. A pasta legacy-app você pode ignorar completamente. A pasta backend, se refere ao backend da aplicação, com seus microserviços SAP CAP e a pasta frontend você encontrará os módulos UI5.
 
